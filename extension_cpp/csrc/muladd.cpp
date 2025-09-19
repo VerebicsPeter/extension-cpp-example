@@ -57,7 +57,7 @@ at::Tensor poly_mul(const at::Tensor& p1, const at::Tensor& p2) {
 
   for (int64_t i = 0; i < p1_contig.numel(); i++) {
     for (int64_t j = 0; j < p2_contig.numel(); j++) {
-      result_ptr[i + j] = p1_ptr[i] * p2_ptr[j];
+      result_ptr[i + j] += p1_ptr[i] * p2_ptr[j];
     }
   }
 
