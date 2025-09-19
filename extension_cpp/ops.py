@@ -64,7 +64,7 @@ def myadd_out(a: Tensor, b: Tensor, out: Tensor) -> None:
 
 
 def poly_mul(p1: Tensor, p2: Tensor) -> Tensor:
-    torch.ops.extension_cpp.poly_mul.default(p1, p2)
+    return torch.ops.extension_cpp.poly_mul.default(p1, p2)
 
 
 @torch.library.register_fake("extension_cpp::poly_mul")

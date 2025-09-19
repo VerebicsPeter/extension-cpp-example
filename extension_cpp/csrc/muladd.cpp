@@ -55,8 +55,8 @@ at::Tensor poly_mul(const at::Tensor& p1, const at::Tensor& p2) {
   const float* p2_ptr = p2_contig.data_ptr<float>();
   float* result_ptr = result.data_ptr<float>();
 
-  for (int64_t i = 0; i < result.numel(); i++) {
-    for (int64_t j = 0; j < result.numel(); j++) {
+  for (int64_t i = 0; i < p1_contig.numel(); i++) {
+    for (int64_t j = 0; j < p2_contig.numel(); j++) {
       result_ptr[i + j] = p1_ptr[i] * p2_ptr[j];
     }
   }
