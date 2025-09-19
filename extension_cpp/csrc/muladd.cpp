@@ -49,7 +49,7 @@ at::Tensor poly_mul(const at::Tensor& p1, const at::Tensor& p2) {
   at::Tensor p1_contig = p1.contiguous();
   at::Tensor p2_contig = p2.contiguous();
                                   // n+1             +  m+1 - 1 = n+m+1
-  at::Tensor result = torch::empty({p1_contig.size(0)+p2_contig.size(0)-1,}, p1_contig.options());
+  at::Tensor result = torch::zeros({p1_contig.size(0)+p2_contig.size(0)-1,}, p1_contig.options());
   
   const float* p1_ptr = p1_contig.data_ptr<float>();
   const float* p2_ptr = p2_contig.data_ptr<float>();
