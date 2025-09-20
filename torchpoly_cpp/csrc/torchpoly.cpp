@@ -109,19 +109,22 @@ def torch_polyval(coeffs, x):
 
     return result
 */
-at::Tensor poly_val(const at::Tensor& coeffs, float x) {
+at::Tensor poly_val(const at::Tensor& coeffs, const at::Scalar& x) {
   TORCH_CHECK(coeffs.dtype() == at::kFloat);
   TORCH_CHECK(coeffs.device().type() == at::DeviceType::CPU);
   
   at::Tensor coeffs_contig = coeffs.contiguous();
   const float* coeffs_ptr = coeffs_contig.data_ptr<float>();
 
-  float result_item = 0;
+  float rf = 0.0f;
+  // NOTE: convert scalar to float 
+  // (float arg is not allowed for passing scalars)
+  float xf = x.to<float>();
   for (int64_t i = 0; i < coeffs_contig.numel(); i++) {
-    result_item = result_item * x + coeffs_ptr[i];
+    rf = rf * xf + coeffs_ptr[i];
   }
 
-  at::Tensor result = torch::tensor({result_item}, coeffs_contig.options());
+  at::Tensor result = torch::tensor({rf}, coeffs_contig.options());
   return result;
 }
 
@@ -144,7 +147,7 @@ at::Tensor poly_der(const at::Tensor& coeffs) {
 TORCH_LIBRARY(torchpoly_cpp, m) {
   m.def("poly_mul(Tensor p1, Tensor p2) -> Tensor");
   m.def("poly_fromroots(Tensor roots) -> Tensor");
-  m.def("poly_val(Tensor coeffs, float x) -> Tensor");
+  m.def("poly_val(Tensor coeffs, Scalar x) -> Tensor");
   m.def("poly_der(Tensor coeffs) -> Tensor");
 }
 

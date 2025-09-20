@@ -74,7 +74,7 @@ def _(p1, p2):
     torch._check(p2.dtype == torch.float)
     torch._check(p1.device == p2.device)
     size = p1.size(0) + p2.size(0) - 1
-    return torch.empty(size)
+    return torch.empty(size, dtype=torch.float, device=p1.device)
 
 
 def poly_fromroots(roots: Tensor) -> Tensor:
@@ -84,7 +84,7 @@ def poly_fromroots(roots: Tensor) -> Tensor:
 def _(roots):
     torch._check(roots.dtype == torch.float)
     size = roots.size(0) + 1
-    return torch.empty(size)
+    return torch.empty(size, dtype=torch.float, device=roots.device)
 
 
 def poly_val(coeffs: Tensor, x: float) -> Tensor:
@@ -94,7 +94,7 @@ def poly_val(coeffs: Tensor, x: float) -> Tensor:
 def _(coeffs, _):
     torch._check(coeffs.dtype == torch.float)
     size = 1
-    return torch.empty(size)
+    return torch.empty(size, dtype=torch.float, device=coeffs.device)
 
 
 def poly_der(coeffs: Tensor) -> Tensor:
@@ -104,4 +104,4 @@ def poly_der(coeffs: Tensor) -> Tensor:
 def _(coeffs):
     torch._check(coeffs.dtype == torch.float)
     size = coeffs.size(0) - 1
-    return torch.empty(size)
+    return torch.empty(size, dtype=torch.float, device=coeffs.device)
