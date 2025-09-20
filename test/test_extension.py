@@ -2,16 +2,17 @@ import torch
 from torch.testing._internal.common_utils import TestCase
 from torch.testing._internal.optests import opcheck
 import unittest
-import extension_cpp
+#import extension_cpp
+import torchpoly_cpp
 from torch import Tensor
 from typing import Tuple
 import torch.nn.functional as F
 import torch.nn as nn
 
-
+# Example for torch docs
+'''
 def reference_muladd(a, b, c):
     return a * b + c
-
 
 class TestMyMulAdd(TestCase):
     def sample_inputs(self, device, *, requires_grad=False):
@@ -167,7 +168,7 @@ class TestTorchCompileStreamSync(TestCase):
                     actual = compiled_model(x)
                 
                 self.assertEqual(actual, expected)
-
+'''
 
 if __name__ == "__main__":
     unittest.main()

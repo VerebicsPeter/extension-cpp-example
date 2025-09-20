@@ -16,7 +16,7 @@ from torch.utils.cpp_extension import (
     CUDA_HOME,
 )
 
-library_name = "extension_cpp"
+library_name = "torchpoly_cpp"
 
 if torch.__version__ >= "2.6.0":
     py_limited_api = True
@@ -78,7 +78,7 @@ setup(
     packages=find_packages(),
     ext_modules=get_extensions(),
     install_requires=["torch"],
-    description="Example of PyTorch C++ and CUDA extensions",
+    description="PyTorch C++ and CUDA extensions for polynomials",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/pytorch/extension-cpp",

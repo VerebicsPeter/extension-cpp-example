@@ -1,9 +1,10 @@
 import torch
 from torch import Tensor
 
-__all__ = ["mymuladd", "myadd_out", "poly_mul"]
+__all__ = ["poly_mul", "poly_fromroots", "poly_val", "poly_der"]
 
-
+# Example for torch docs
+'''
 def mymuladd(a: Tensor, b: Tensor, c: float) -> Tensor:
     """Performs a * b + c in an efficient fused kernel"""
     return torch.ops.extension_cpp.mymuladd.default(a, b, c)
@@ -61,16 +62,46 @@ def _(a, b):
 def myadd_out(a: Tensor, b: Tensor, out: Tensor) -> None:
     """Writes a + b into out"""
     torch.ops.extension_cpp.myadd_out.default(a, b, out)
+'''
 
 
 def poly_mul(p1: Tensor, p2: Tensor) -> Tensor:
-    return torch.ops.extension_cpp.poly_mul.default(p1, p2)
+    return torch.ops.torchpoly_cpp.poly_mul.default(p1, p2)
 
-
-@torch.library.register_fake("extension_cpp::poly_mul")
+@torch.library.register_fake("torchpoly_cpp::poly_mul")
 def _(p1, p2):
     torch._check(p1.dtype == torch.float)
     torch._check(p2.dtype == torch.float)
     torch._check(p1.device == p2.device)
-    size = p1.size(0)+p2.size(0)-1
+    size = p1.size(0) + p2.size(0) - 1
+    return torch.empty(size)
+
+
+def poly_fromroots(roots: Tensor) -> Tensor:
+    return torch.ops.torchpoly_cpp.poly_fromroots.default(roots)
+
+@torch.library.register_fake("torchpoly_cpp::poly_fromroots")
+def _(roots):
+    torch._check(roots.dtype == torch.float)
+    size = roots.size(0) + 1
+    return torch.empty(size)
+
+
+def poly_val(coeffs: Tensor, x: float) -> Tensor:
+    return torch.ops.torchpoly_cpp.poly_val.default(coeffs, x)
+
+@torch.library.register_fake("torchpoly_cpp::poly_val")
+def _(coeffs, _):
+    torch._check(coeffs.dtype == torch.float)
+    size = 1
+    return torch.empty(size)
+
+
+def poly_der(coeffs: Tensor) -> Tensor:
+    return torch.ops.torchpoly_cpp.poly_der.default(coeffs)
+
+@torch.library.register_fake("torchpoly_cpp::poly_der")
+def _(coeffs):
+    torch._check(coeffs.dtype == torch.float)
+    size = coeffs.size(0) - 1
     return torch.empty(size)

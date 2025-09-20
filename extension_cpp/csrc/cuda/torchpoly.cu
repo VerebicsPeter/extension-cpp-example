@@ -6,8 +6,9 @@
 #include <cuda_runtime.h>
 #include <ATen/cuda/CUDAContext.h>
 
-namespace extension_cpp {
-
+namespace torchpoly_cpp {
+// Example for CUDA kernel of custom op
+/*
 __global__ void muladd_kernel(int numel, const float* a, const float* b, float c, float* result) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < numel) result[idx] = a[idx] * b[idx] + c;
@@ -80,12 +81,11 @@ void myadd_out_cuda(const at::Tensor& a, const at::Tensor& b, at::Tensor& out) {
   add_kernel<<<(numel+255)/256, 256, 0, stream>>>(numel, a_ptr, b_ptr, result_ptr);
 }
 
-
 // Registers CUDA implementations for mymuladd, mymul, myadd_out
 TORCH_LIBRARY_IMPL(extension_cpp, CUDA, m) {
   m.impl("mymuladd", &mymuladd_cuda);
   m.impl("mymul", &mymul_cuda);
   m.impl("myadd_out", &myadd_out_cuda);
 }
-
+*/
 }
