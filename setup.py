@@ -81,7 +81,7 @@ setup(
     description="PyTorch C++ and CUDA extensions for polynomials",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/pytorch/extension-cpp",
+    url="",
     cmdclass={"build_ext": BuildExtension},
     options={"bdist_wheel": {"py_limited_api": "cp39"}} if py_limited_api else {},
 )
