@@ -87,13 +87,18 @@ def _(roots):
     return torch.empty(size, dtype=torch.float, device=roots.device)
 
 
-def poly_val(coeffs: Tensor, x: float) -> Tensor:
+def poly_val(coeffs: Tensor, x: Tensor | float) -> Tensor:
+    if isinstance(x, Tensor):
+        if x.dim() != 0:
+            raise ValueError("'poly_val' only supports scalar values, not tensors.")
+        x = x.item()
+
     return torch.ops.torchpoly_cpp.poly_val.default(coeffs, x)
 
 @torch.library.register_fake("torchpoly_cpp::poly_val")
 def _(coeffs, _):
     torch._check(coeffs.dtype == torch.float)
-    size = 1
+    size = ()
     return torch.empty(size, dtype=torch.float, device=coeffs.device)
 
 

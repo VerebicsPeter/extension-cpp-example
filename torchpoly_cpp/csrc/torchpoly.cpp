@@ -124,7 +124,7 @@ at::Tensor poly_val(const at::Tensor& coeffs, const at::Scalar& x) {
     rf = rf * xf + coeffs_ptr[i];
   }
 
-  at::Tensor result = torch::tensor({rf}, coeffs_contig.options());
+  at::Tensor result = torch::tensor({rf}, coeffs_contig.options()).squeeze();
   return result;
 }
 
