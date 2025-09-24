@@ -272,8 +272,9 @@ namespace torchwavelets_cpp
     for (int64_t k = 0; k < M; k++)
     {
       auto dPp = -( Pf/( (x - pk[k])*(x + pk[k]) ) )*2*pk[k];
-      auto roots = torch::cat({pk.slice(0,0,k), pk.slice(0,k+1)});
-      auto roots = torch::cat({roots, -roots, torch::tensor({0.0f}, roots.options())});
+      at::Tensor roots;
+      roots = torch::cat({pk.slice(0,0,k), pk.slice(0,k+1)});
+      roots = torch::cat({roots, -roots, torch::tensor({0.0f}, roots.options())});
       auto Pcurr = torchpoly_cpp::poly_fromroots(roots);
       auto Pf = torchpoly_cpp::poly_val(Pcurr, x);
 
