@@ -62,3 +62,4 @@ compile_commands.json
 
 # vscode configs
 .vscode
+.editorconfig
