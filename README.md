@@ -1,4 +1,4 @@
-# C++ Extension for polynomial operations in PyTorch
+# C++ Extension for polynomial and wavelet operations in PyTorch
 
 The extensions in this repo work with PyTorch 2.4+.
 
