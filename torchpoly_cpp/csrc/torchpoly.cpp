@@ -2,11 +2,9 @@
 #include <ATen/Operators.h>
 #include <torch/all.h>
 #include <torch/library.h>
-#include <torch/torch.h>
 
 using namespace torch::indexing;
 
-#include <cmath>
 #include <tuple>
 #include <vector>
 
@@ -147,10 +145,8 @@ namespace torchwavelets_cpp
 {
 
   /*
-  '''
-  beta : scalar - imag part of one of the poles of R
-  bmin: scalar - minimum absolute value of imaginary part of R's poles
-  '''
+  beta : imag part of one of the poles of R
+  bmin : minimum absolute value of imaginary part of R's poles
   */
   std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
   _Q(const at::Tensor &x, const at::Scalar &a, const at::Scalar &beta, const at::Scalar &bmin)
@@ -175,12 +171,10 @@ namespace torchwavelets_cpp
   }
 
   /*
-  '''
-  x : vector - dilated, translated datapoints of the effective support of the function
-  a : scalar - real part one of the poles of R
-  beta : scalar - imag part one of the poles of R
-  bmin: scalar - minimum absolute value of imaginary part of R's poles
-  '''
+  x : dilated, translated datapoints of the effective support of the function
+  a : real part one of the poles of R
+  beta : imag part one of the poles of R
+  bmin : minimum absolute value of imaginary part of R's poles
   */
   std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
   _R(const at::Tensor &x, const at::Scalar &a, const at::Scalar &beta, const at::Scalar &bmin)
@@ -195,9 +189,17 @@ namespace torchwavelets_cpp
     at::Tensor dRb = inv_sqr_Qf * dQb;
     return {Rf, dRx, dRa, dRb};
   }
-
+  
+  /*
+  x : dilated, translated datapoints of the effective support of the function
+  ak : real part of the poles of R
+  betak : imag part of the poles of R
+  pk : zeros of the polynom on the positive half-space
+  bmin : minimum absolute value of imaginary part of R's poles
+  sigma : parameter of the Gaussian function
+  */
   std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-  wav_psi_fun(
+  psi_fun(
       const at::Tensor &x,
       const at::Tensor &ak,
       const at::Tensor &betak,
@@ -209,12 +211,12 @@ namespace torchwavelets_cpp
     TORCH_CHECK(ak.device().is_cpu());
     TORCH_CHECK(pk.device().is_cpu());
     TORCH_CHECK(betak.device().is_cpu());
-    
+
     const int64_t N = ak.numel();
     const int64_t M = pk.numel();
     const int64_t L = x.numel();
 
-    at::Tensor Rfun = torch::ones({L},x.options());
+    at::Tensor Rfun = torch::ones({L}, x.options());
     at::Tensor r_k = torch::zeros({N, L}, x.options());
     at::Tensor dRx_k = torch::zeros({N, L}, x.options());
     at::Tensor dRa_k = torch::zeros({N, L}, x.options());
@@ -249,16 +251,16 @@ namespace torchwavelets_cpp
     auto sigma_val = at::scalar_to_tensor(sigma).to(x.dtype());
     auto sigma_sqr = sigma_val*sigma_val;
     auto exp_neg_x_over_sigma_sqr = torch::exp(-at::pow(x,2)/sigma_sqr);
-    
+
     /*  Construct the mother wavelet and derivatives */
     at::Tensor Psi = Pf*Rfun*exp_neg_x_over_sigma_sqr;
-    
+
     // Derivatives w.r.t. x
     at::Tensor dPsix = dPx*Rfun*exp_neg_x_over_sigma_sqr + Pf*dRx*exp_neg_x_over_sigma_sqr - 2*x/sigma_sqr*Psi;
     // Derivatives w.r.t. a,b
     at::Tensor dPsia = torch::zeros({N, L}, x.options());
     at::Tensor dPsib = torch::zeros({N, L}, x.options());
-    
+
     for (int64_t k = 0; k < N; k++)
     {
       auto rr = torch::cat({r_k.slice(0,0,k), r_k.slice(0,k+1)}); // erase kth row because of partial derivatives
@@ -271,25 +273,29 @@ namespace torchwavelets_cpp
     at::Tensor dPsip = torch::zeros({M, L}, x.options());
     for (int64_t k = 0; k < M; k++)
     {
-      auto dPp = -( Pf/( (x - pk[k])*(x + pk[k]) ) )*2*pk[k];
-      at::Tensor roots;
+      at::Tensor roots, dPp;
+      dPp = -( Pf/( (x - pk[k])*(x + pk[k]) ) )*2*pk[k];
       roots = torch::cat({pk.slice(0,0,k), pk.slice(0,k+1)});
       roots = torch::cat({roots, -roots, torch::tensor({0.0f}, roots.options())});
       auto Pcurr = torchpoly_cpp::poly_fromroots(roots);
-      auto Pf = torchpoly_cpp::poly_val(Pcurr, x);
-
-      auto dPp = -Pf*2*pk[k];
-      //dPp = dPp.clone().detach().to(device)
+      Pf = torchpoly_cpp::poly_val(Pcurr, x);
+      dPp = -Pf*2*pk[k];
       dPsip[k] = dPp*Rfun*exp_neg_x_over_sigma_sqr;
     }
 
     // Derivatives w.r.t. sigma
-    auto dPsiSigma = Psi*2*at::pow(x,2)*at::pow(sigma_val, 3);
+    auto dPsiSigma = Psi*2*at::pow(x,2)*at::pow(sigma_val, -3);
 
     return {Psi, dPsix, dPsia, dPsib, dPsip, dPsiSigma};
   }
 
-  //
+  /*
+  p : number of zeros in P
+  r : number of poles in R
+  n : number of wavelet coefficients
+  bmin : minimum absolute value of imaginary part of R's poles
+  alpha : (p1, ..., pp, r0real, r0imag, ..., rrreal, rrimag, s1, x1, s2, x2, ..., sn, xn, sigma)
+  */
   std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
   adaRatGaussWav(
       c10::SymInt n,
@@ -319,7 +325,7 @@ namespace torchwavelets_cpp
   {
     TORCH_CHECK(t.dtype()  == dtype  && params.dtype()  == dtype );
     TORCH_CHECK(t.device() == device && params.device() == device);
-    
+
     at::Tensor alpha = params;
 
     // Some useful constants for indexing
@@ -346,12 +352,12 @@ namespace torchwavelets_cpp
     auto pk    = alpha.slice(0, 0, p_);
 
     // Generate the wavelets and derivatives w.r.t. alpha
-    for (int64_t k = 0; k < n; k++)
+    for (int64_t k = 0; k < n_; k++)
     {
       // Break up alpha to make the code readable
       int64_t begindzers = k*L; // k*L+1 in matlab, because start index is 1, not 0
       int64_t endindzers = begindzers+p_; // p-1 in matlab
-        
+
       int64_t begindpoles = k*L+polebeg;
       int64_t endindpoles = begindpoles+2*r_; // 2*r-1 in matlab
 
@@ -359,16 +365,13 @@ namespace torchwavelets_cpp
 
       // Current dilation and translation
       auto s = alpha[wavebeg+2*k];
-      auto ss = s;
-      if (s_square)
-        ss = at::pow(s,2) + smin;
+      auto ss = s_square? (at::pow(s,2) + smin) : s;
       auto x = alpha[wavebeg+2*k+1];
       auto tt = (t-x)/ss;
 
-      auto [Psi, dPsix, dPsia, dPsib, dPsip, dPsiSigma] = wav_psi_fun(tt, ak, betak, pk, bmin, {sigma.item()});
+      auto [Psi, dPsix, dPsia, dPsib, dPsip, dPsiSigma] = psi_fun(tt, ak, betak, pk, bmin, {sigma.item()});
 
       auto sqrt_ss = torch::sqrt(ss);
-      auto invr_ss = torch::pow(ss, -1.5);
 
       // Normalize Psi
       Psi = Psi / sqrt_ss;
@@ -386,20 +389,22 @@ namespace torchwavelets_cpp
       dPhi.index_put_({Slice(), Slice(begindzers, endindzers)}, dPsip);
       Ind.index_put_({0, Slice(begindzers, endindzers)}, k);
       Ind.index_put_({1, Slice(begindzers, endindzers)}, torch::arange(0, p));
-      
+
       // poles
       dPhi.index_put_({Slice(), Slice(begindpoles, endindpoles-1, 2)}, dPsia);
       Ind.index_put_({0, Slice(begindpoles, endindpoles-1, 2)}, k);
       Ind.index_put_({1, Slice(begindpoles, endindpoles-1, 2)}, torch::arange(polebeg, poleend-1, 2));
-      
+
       dPhi.index_put_({Slice(), Slice(begindpoles+1, endindpoles, 2)}, dPsib);
       Ind.index_put_({0, Slice(begindpoles+1, endindpoles, 2)}, k);
       Ind.index_put_({1, Slice(begindpoles+1, endindpoles, 2)}, torch::arange(polebeg+1, poleend, 2));
 
+      auto invr_ss_1p5 = torch::pow(ss, -1.5);
+      auto invr_ss_sqr = torch::pow(ss, -2.0);
       // Wavelet parameters
-      auto dPsis = -0.5 * invr_ss * Psi * sqrt_ss + (1.0 / sqrt_ss)  * dPsix * (-1.0 * torch::pow(ss, -2)) * (t - x).t();
+      auto dPsis = -0.5 * invr_ss_1p5 * Psi * sqrt_ss + (1.0 / sqrt_ss)  * dPsix * (-invr_ss_sqr) * (t - x).t();
       if (s_square) dPsis = dPsis * 2 * s;
-      auto dPsit = dPsix * (-1.0) * invr_ss;
+      auto dPsit = dPsix * (-1.0) * invr_ss_1p5;
 
       int64_t begindwav = k * L + wavebeg;
       int64_t endindwav = begindwav + 2; // 1 in matlab
@@ -416,6 +421,7 @@ namespace torchwavelets_cpp
       Ind.index_put_({0, begindsig}, k);
       Ind.index_put_({1, begindsig}, (alpha.size(0) - 1));
     }
+    
     Ind = Ind.to(torch::kInt64);
 
     return {Phi, dPhi, Ind, dPhit};
@@ -426,17 +432,16 @@ namespace torchwavelets_cpp
   {
     m.def("_Q(Tensor x, Scalar a, Scalar beta, Scalar bmin) -> (Tensor, Tensor, Tensor, Tensor)");
     m.def("_R(Tensor x, Scalar a, Scalar beta, Scalar bmin) -> (Tensor, Tensor, Tensor, Tensor)");
-    m.def("wav_psi_fun(Tensor x, Tensor ak, Tensor betak, Tensor pk, Scalar bmin, Scalar sigma) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)");
+    m.def("psi_fun(Tensor x, Tensor ak, Tensor betak, Tensor pk, Scalar bmin, Scalar sigma) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)");
     m.def("adaRatGaussWav(SymInt n, Tensor t, Tensor params, SymInt p, SymInt r, Scalar bmin, Scalar smin, bool s_square, ScalarType dtype, Device device) -> (Tensor, Tensor, Tensor, Tensor)");
   }
 
-  // Registers CPU implementations  
+  // Registers CPU implementations
   TORCH_LIBRARY_IMPL(torchwavelets_cpp, CPU, m)
   {
     m.impl("_Q", &_Q);
     m.impl("_R", &_R);
-    m.impl("wav_psi_fun", &wav_psi_fun);
+    m.impl("psi_fun", &psi_fun);
     m.impl("adaRatGaussWav", &adaRatGaussWav);
   }
-  
 }

@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-__all__ = ["poly_mul", "poly_fromroots", "poly_val", "poly_der"]
+__all__ = ["poly_mul", "poly_fromroots", "poly_val", "poly_der", "psi_fun", "adaRatGaussWav"]
 
 # Example for torch docs
 '''
@@ -88,10 +88,7 @@ def _(roots):
 
 
 def poly_val(coeffs: Tensor, x: Tensor | float) -> Tensor:
-    if isinstance(x, Tensor):
-        if x.dim() != 0:
-            raise ValueError("'poly_val' only supports scalar values, not tensors.")
-        x = x.item()
+    if isinstance(x, float): x = torch.tensor(x)
 
     return torch.ops.torchpoly_cpp.poly_val.default(coeffs, x)
 
@@ -110,3 +107,49 @@ def _(coeffs):
     torch._check(coeffs.dtype == torch.float)
     size = coeffs.size(0) - 1
     return torch.empty(size, dtype=torch.float, device=coeffs.device)
+
+
+def psi_fun(x: Tensor, ak: Tensor, betak: Tensor, pk: Tensor, bmin: float, sigma: float):
+    return torch.ops.torchwavelets_cpp.psi_fun(x, ak, betak, pk, bmin, sigma)
+
+@torch.library.register_fake("torchwavelets_cpp::psi_fun")
+def _(x, ak, betak, pk, bmin, sigma):
+    N = ak.size(0)
+    M = pk.size(0)
+    L = x.size(0)
+    
+    args = {
+        "dtype": x.dtype,
+        "device": x.device,
+    }
+    
+    _dummy_Psi = torch.empty(L, **args)
+    _dummy_dPsix = torch.empty((N, L), **args)
+    _dummy_dPsia = torch.empty((N, L), **args)
+    _dummy_dPsib = torch.empty((N, L), **args)
+    _dummy_dPsip = torch.empty((M, L), **args)
+    _dummy_dPsiSigma = torch.empty((L), **args)
+    
+    return _dummy_Psi, _dummy_dPsix, _dummy_dPsia, _dummy_dPsib, _dummy_dPsip, _dummy_dPsiSigma
+
+
+def adaRatGaussWav(
+    n: int,
+    t: Tensor,
+    params: Tensor,
+    p: int,
+    r: int,
+    bmin: float,
+    smin: float,
+    s_square: bool = False,
+    dtype: torch.dtype=torch.float,
+    device: torch.device="cpu",
+):
+    return torch.ops.torchwavelets_cpp.adaRatGaussWav(
+        n, t, params, p, r, bmin, smin, s_square, dtype, device
+    )
+"""#TODO
+@torch.library.register_fake("torchwavelets_cpp::adaRatGaussWav")
+def _(_):
+    pass
+"""
